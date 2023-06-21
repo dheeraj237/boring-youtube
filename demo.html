@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html data-bs-theme="dark">
+<head>
+    <title>Search API Example</title>
+    <link rel="stylesheet" href="node_modules/lite-youtube-embed/src/lite-yt-embed.css" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
+        <script type="module" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz"
+        crossorigin="anonymous"></script>
+        <script type="module" src="https://cdn.jsdelivr.net/npm/@justinribeiro/lite-youtube@1.5.0/lite-youtube.js"></script>
+    <style>
+        .result-item {
+            border-style: ridge;
+            border-width: 1px;
+            border-radius: 8px;
+        }
+
+        .video-resize {
+            border-style: ridge;
+            border-width: 1px;
+            padding: 5px;
+            resize: both;
+            overflow: auto;
+        }
+        #spinner-div {
+            position: fixed;
+            display: none;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            text-align: center;
+            background-color: rgba(131, 131, 131, 0.8);
+            z-index: 99;
+        }
+        .center-spot {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg bg-body-tertiary fixed-top bg-dark">
+        <div class="container-fluid m-1">
+            <a class="navbar-brand" href="#">🪫 Boring Youtube</a>
+            <div class="navbar col">
+                <div class="input-group">
+                    <input type="test" class="form-control" id="searchInput" placeholder="Enter a search term">
+                    <button id="searchButton" class="btn btn-outline-secondary" type="button" onclick="searchAPI()"
+                        data-loading-text="Searching...">Search</button>
+                    </div>
+            </div>
+            </div>
+            </nav>
+    <main class="container" style="margin-top: 90px;" id="results">
+        <div class="center-spot" style="transform: translate(-50%, 0);">
+            Welcome to The Boring YouTube. We're delighted to offer you a website free from distractions, where the focus remains
+            solely on the power of videos. Here, you'll find an oasis of content, untainted by recommendations, ads, tracking,
+            logging, or any external influences.
+        </div>
+    </main>
+    <div id="spinner-div" class="pt-5">
+        <div class="spinner-border center-spot" role="status">
+        </div>
+    </div>
+
+
+    <script>
+        var input = document.getElementById("searchInput");
+        input.addEventListener("keypress", function (event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                document.getElementById("searchButton").click();
+            }
+        });
+        function searchAPI() {
+            var searchTerm = document.getElementById('searchInput').value;
+            $("#spinner-div").show();
+            var apiUrl = 'https://37o7w40k12.execute-api.ap-south-1.amazonaws.com/v1/get-yt-data?query=' + searchTerm;
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    window.scrollTo(0, 0);
+                    $("#spinner-div").hide(); 
+                    var resultsDiv = document.getElementById('results');
+                    resultsDiv.innerHTML = '';
+
+                    if (data && data.data && data.data.results && data.data.results.length > 0) {
+                        getVideosHTML(data, resultsDiv);
+                    } else {
+                        var noResultsMessage = document.createElement('p');
+                        noResultsMessage.textContent = 'No results found.';
+                        resultsDiv.appendChild(noResultsMessage);
+                    }
+                })
+                .catch(error => {
+                    window.scrollTo(0, 0);
+                    $("#spinner-div").hide(); 
+                    console.log('Error:', error);
+                });
+        }
+        function getVideosHTML(data, dom) {
+            const results = data.data.results;
+            const onlyVideoResults = results.filter((result) => !!result.video);
+            const firstEightResults = onlyVideoResults.slice(0, 10);
+            const firstEightVideos = firstEightResults.map((v) => {
+                return {
+                    id: v.video.id,
+                    title: v.video.title,
+                    duration: v.video.duration,
+                    uploadDate: v.video.upload_date,
+                    views: v.video.views,
+                    uploader: v.uploader,
+                };
+            });
+
+            let videosListHTML = "";
+            firstEightVideos.forEach((video) => {
+                const videoURL = `https://www.youtube.com/watch?v=${video.id}`;
+                videosListHTML += `
+            <div style="margin-bottom:55px;" class="row result-item">
+                <div class="col-xs-12 col-sm-12 col-md-12 col-lg-8 video-resize">
+                    <lite-youtube videoid=${video.id} playlabel=${video.title} params="modestbranding=1&rel=0"></lite-youtube>
+                </div>
+                    <div class="col">
+                        <h5>${video.title}</h5>
+                        <span>
+                            <svg style="width:12px; margin-right:5px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <span>${video.duration}</span>
+                        </span>|
+                        <span>
+                            <svg style="width:12px; margin-right:5px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                            <span>${video.views}</span>
+                        </span>|
+                        <span>
+                            <svg style="width:12px; margin-right:5px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            <span>${video.uploadDate}</span>
+                        </span>|
+                        <span>
+                            by <a href=${video.uploader.url} target="_blank">${video.uploader.username}</a>
+                        </span>|
+                        <span>
+                            <a href=${videoURL} target="_blank">Watch on YouTube</a>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="rgba(0, 0, 0, 0.65)" width="24" height="24" viewBox="0 0 172 172"><g fill="none" stroke-miterlimit="10" font-family="none" font-weight="none" font-size="none" text-anchor="none" style="mix-blend-mode:normal"><path d="M0 172V0h172v172z"/><path d="M148.603 17.868a5.377 5.377 0 00-.58.049H98.541a5.376 5.376 0 100 10.75h37.19L80.409 83.99a5.376 5.376 0 107.6 7.601l55.325-55.325v37.191a5.376 5.376 0 1010.75 0V23.971a5.376 5.376 0 00-5.48-6.103zM44.792 28.667c-14.78 0-26.875 12.095-26.875 26.875v71.666c0 14.78 12.095 26.875 26.875 26.875h71.666c14.78 0 26.875-12.095 26.875-26.875V91.375a5.376 5.376 0 10-10.75 0v35.833c0 8.971-7.154 16.125-16.125 16.125H44.792c-8.971 0-16.125-7.154-16.125-16.125V55.542c0-8.971 7.154-16.125 16.125-16.125h35.833a5.376 5.376 0 100-10.75z" fill="rgba(0, 0, 0, 0.65)"/></g></svg>
+                        </span>
+                    </div>
+                </div>
+            </div>
+            `;
+            });
+            var resultsElement = document.createElement('div');
+            resultsElement.innerHTML = videosListHTML;
+            dom.appendChild(resultsElement);
+        }
+    </script>
+</body>
+
+</html>
